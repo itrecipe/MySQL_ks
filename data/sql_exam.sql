@@ -605,3 +605,443 @@ from 사원 as 상사
 right outer join 사원
 on 사원.상사번호 = 상사.사원번호
 order by 상사이름;
+
+-- ex) 6-1 최고 마일리지를 보유한 고객의 정보를 보여라
+select 고객번호
+,고객회사명
+,담당자명
+,마일리지
+from 고객
+where 마일리지 = (select max(마일리지)
+from 고객
+);
+
+-- ex)6-2 주문번호 'H0250'을 주문한 고객에 대해 rhrorghltkaudrhk 담당자명을 보여라
+-- 서브쿼리 사용
+select 고객회사명
+,담당자명
+from 고객
+where 고객번호 = (select 고객번호
+from 주문
+where 주문번호 = 'H0250');
+
+-- 조인 사용
+select 고객회사명
+,담당자명
+from 고객
+inner join 주문
+on 고객.고객번호 = 주문.고객번호
+where 주문번호 = 'H0250';
+
+-- 서브쿼리 사용 예제
+-- ex)6-3 '부산광역시' 고객의 최소 마일리지보다 더 큰 마일리지를 가진 고객 정보를 보여라
+select 담당자명
+,고객회사명
+,마일리지
+from 고객
+where 마일리지 > (select min(마일리지)
+from 고객
+where 도시 = '부산광역시'
+);
+
+-- 위 문제에서 고객정보만 보여라 라고 했기 때문에 위 문제처럼 할필요없이 *로 검색조건을 추출해줘도 된다
+select *
+from 고객
+where 마일리지 > (select min(마일리지)
+from 고객
+where 도시 = '부산광역시'
+);
+
+-- ex)6-4 '부산광역시' 고객이 주문한 주문건수를 보여라
+select count(*) as 주문건수
+from 주문
+where 고객번호 in (select 고객번호
+from 고객
+where 도시 = '부산광역시'
+); -- 51건은 in 연산자로 일일이 하나하나 조건을 비교하여 카운팅한 횟수를 뽑아낸 결과값
+
+-- ex)6-5 '부산광역시' 전체 고객의 마일리지보다 큰 고객의 정보를 보여라
+select 담당자명
+,고객회사명
+,마일리지
+from 고객
+where 마일리지 > any (select 마일리지
+from 고객
+where 도시 = '부산광역시');
+
+-- ex)6-6 각 지역의 어느 평균 마일리지보다도 마일리지가 큰 고객의 정보를 보여라
+select 담당자명
+,고객회사명
+,마일리지
+from 고객
+where 마일리지 > all (select avg(마일리지) -- 햇갈릴 경우 서브쿼리 먼저 검색해볼것
+from 고객
+group by 지역
+);
+
+select avg(마일리지) from 고객 group by 지역;
+
+-- ex)6-7 한번 이라도 주문한 적이 있는 고객 정보를 보여라
+select 고객번호
+,고객회사명
+from 고객
+where exists (select *
+from 주문
+where 고객번호 = 고객.고객번호
+);
+
+-- ex)6-8 고객 전체의 평균마일리지보다 평균마일리지가 큰 도시에 대해
+-- 도시명과 도시의 평균마일리지를 보여라
+select 도시
+,avg(마일리지) as 평균마일리지
+from 고객
+group by 도시
+having avg(마일리지) > (select avg(마일리지)
+from 고객
+);
+
+-- ex)6-9 담당자명, 고객회사명, 마일리지, 도시, 해당 도시의 평균마일리지를 보여라
+-- 그리고 고객이 위치하는 도시의 평균마일리지와 각 고객의 마일리지 간의 차이도 함께 보여라
+select 담당자명
+,고객회사명
+,마일리지
+,고객.도시
+,도시_평균마일리지
+,도시_평균마일리지 - 마일리지 as 차이
+from 고객
+,(select 도시
+,avg(마일리지) as 도시_평균마일리지
+from 고객
+group by 도시
+) as 도시별요약
+where 고객.도시 = 도시별요약.도시;
+
+-- ex)6-10 고객번호, 담당자명과 고객의 최종 주문일을 보여라
+-- 해당 고객의 최종 주문일을 찾기 위해 스칼라 서브쿼리를 사용한다.
+select 고객번호
+,담당자명
+,(select max(주문일)
+from 주문
+where 주문.고객번호 = 고객.고객번호)
+as 최종주문일
+from 고객;
+
+-- ex)6-11 ex)6-9를 CTE를 사용해 작성하라
+
+-- MYSQ 8.0 최신기능 CTE 사용
+WITH 도시별요약 AS
+(select 도시 ,avg(마일리지) 
+as 도시_평균마일리지
+from 고객
+group by 도시
+)
+
+select 담당자명
+,고객회사명
+,마일리지
+,고객.도시
+,도시_평균마일리지
+,도시_평균마일리지 - 마일리지 as 차이
+from 고객
+,도시별요약
+where 고객.도시 = 도시별요약.도시;
+
+-- 상관 서브쿼리 & 다중 컬럼 서브쿼리 사용예제
+-- ex)6-12 사원 테이블에서 사원번호, 사원의 이름, 상사의 사원번호, 상사의 이름을 보여라
+
+-- 상관 서브쿼리
+select 사원번호
+,이름
+,상사번호
+,(select 이름
+from 사원 as 상사
+where 상사.사원번호 = 사원.상사번호) as 상사이름
+from 사원;
+
+select 사원번호, 이름, 상사번호
+from 사원;
+
+-- 다중 컬럼 서브쿼리 (여러 개의 컬럼을 사용해 다중 비교를 수행하는 쿼리)
+-- ex)6-13 각 도시마다 최고 마일리지를 보유한 고객 정보를 보여라
+select 도시
+,담당자명
+,고객회사명
+,마일리지
+from 고객
+where(도시,마일리지) in (select 도시, max(마일리지) -- 순서와 개수가 같아야 한다.
+from 고객
+group by 도시);
+
+-- 데이터 흐름을 확인하기 위해 서브 쿼리만 따로 추출
+(select 도시, max(마일리지) from 고객 group by 도시);
+
+-- DML(데이터 조작어) select(조회), insert(삽입), update(수정), delete(삭제)
+
+-- insert문
+-- ex)7-1 부서 테이블에 다음 레코드를 삽입하라
+-- 부서번호: A5, 부서명 : 마케팅부
+insert into 부서 values('A5', '마케팅부');
+
+select * from 부서;
+
+delete from 부서
+where 부서번호 = 'AS';
+
+-- ex)7-2 제품 테이블에 다음 레코드를 추가하시오
+-- 제품번호: 91, 제품명: 연어피클소스, 단가: 5000, 재고: 40
+insert into 제품
+values(91, '연어피클소스', null, 5000, 40);
+
+-- ex)7-3 제품 테이블에 다음 레코드를 추가하시오
+-- 제품번호: 90, 제품명: 연어피클소스, 단가: 5000, 재고: 40
+insert into 제품(제품번호, 제품명, 단가, 재고)
+values(90, '연어핫소스', 4000, 50);
+
+select * from 제품;
+
+-- ex)7-4 사원 테이블에 한 문장으로 세 명의 레코드를 추가하라
+-- 사원번호 : E20, 이름: 김사과, 직위 : 수습사원, 성별 : 남, 입사일 : 현재 날짜
+-- 사원번호 : E21, 이름: 박바나나, 직위 : 수습사원, 성별 : 여, 입사일 : 현재 날짜
+-- 사원번호 : E22, 이름: 정오렌지, 직위 : 수습사원, 성별 : 여, 입사일 : 현재 날짜
+
+insert into 사원(사원번호, 이름, 직위, 성별, 입사일)
+values('E20', '김사과', '수습사원', '남', curdate())
+,('E21', '박바나나', '수습사원', '여', curdate())
+,('E22', '정오렌지', '수습사원', '여', curdate());
+
+select * from 사원;
+
+-- update문
+-- ex)7-5 사원번호가 'E20'인 사원의 데이터를 다음과 같이 수정하라
+-- (사원번호 : E20, 이름 : 김사과) -> (사원번호 : E20, 이름 : 김레몬)
+update 사원
+set 이름 = '김레몬'
+where 사원번호 = 'E20';
+
+select * from 사원;
+
+-- ex)7-6 제품번호가 91인 제품에 대하여 포장 단위를 추가하라
+-- (제품번호 : 91, 포장단위 : null) -> (제품번호 : 91, 포장단위 : '200 ml bottles')
+
+update 제품
+set 포장단위 = '200 ml bottles'
+where 제품번호 = 91;
+
+-- ex)7-7 제품번호가 91인 제품에 대하여 단가를 10%인상하고, 재고에서 10을 뺀 값으로 변경하라
+-- update에서 두개 이상의 조건을 넣고 싶은 경우 , 하나 찍으면 됨
+update 제품
+set 단가 = 단가 * 1.1
+,재고 = 재고 - 10
+where 제품번호 = 91;
+
+select * from 제품;
+
+-- delete문
+-- ex)7-8 제품 테이블에서 제품번호가 91인 레코드를 삭제하라
+delete from 제품
+where 제품번호 = 91;
+
+select * from 제품;
+
+-- ex)7-9 사원 테이블에서 입사일이 가장 늦은 사원 3명의 레코드를 삭제하라
+delete from 사원
+order by 입사일 desc
+limit 3;
+
+-- ex)7-4에서 추가한 '김레몬', '박바나나', '정오렌지'가 삭제된 것을 확인할 쿼리
+select * 
+from 사원
+where 이름 in('김레몬', '박바나나', '정오렌지');
+
+select * from 사원;
+
+-- on duplicate key update : 레코드가 없다면 새로이 추가하고, 이미 있으면 데이터를 변경하는 경우에 사용한다.
+-- ex)7-10 91번 제품이 없다면 레코드를 추가하고, 이미 존재하면 값을 변경하라
+-- 제품번호 : 91, 제품명 : 연어피클핫소스, 단가 : 6000, 재고 : 50
+insert into 제품(제품번호, 제품명, 단가, 재고)
+values(91, '연어피클핫소스', 6000, 50)
+on duplicate key update
+제품명 = '연어피클핫소스', 단가 = 7000, 재고 = 70;
+
+select * 
+from 제품
+where 제품번호 = 91;
+
+-- insert into select문
+-- ex)7-11 고객주문요약 테이블을 만들고, 레코드를 추가하라
+create table 고객주문요약
+(
+고객번호 char(5) primary key
+,고객회사명 varchar(50)
+,주문건수 int
+,최종주문일 date
+);
+
+-- ex)7-11 고객주문요약 테이블을 만들고, 레코드를 추가하라
+insert into 고객주문요약
+select 고객.고객번호
+,고객회사명
+,count(*)
+,max(주문일)
+from 고객
+,주문
+where 고객.고객번호 = 주문.고객번호
+group by 고객.고객번호
+,고객회사명;
+
+select * from 고객주문요약;
+
+-- update select
+-- ex)7-12 제품번호가 91인 제품의 단가를 '소스' 제품들의 평균단가로 변경하라
+update 제품
+set 단가 = (
+select *
+from(
+select avg(단가)
+from 제품
+where 제품명 like '%소스%'
+) as t
+)
+where 제품번호 = 91;
+
+select * from 제품;
+
+-- ex)7-13 한 번이라도 주문한 적이 있는 고객의 마일리지를 10% 인상하시오
+update 고객
+,(
+select distinct 고객번호
+from 주문
+) as 주문고객
+set 마일리지 = 마일리지 * 1.1
+where 고객.고객번호 in (주문고객.고객번호);
+
+-- 결과 확인을 위한 select문
+select *
+from 고객
+where 고객번호 in
+(select distinct 고객번호 from 주문);
+
+-- ex)7-14 마일리지등급이 "S"인 고객의 마일리지에 1000점씩 추가하시오.
+-- ANSI SQL 표현
+update 고객
+inner join 마일리지등급
+on 마일리지 between 하한마일리지 and 상한마일리지
+set 마일리지 = 마일리지 + 1000
+where 등급명 = 'S';
+
+-- Non-ANSI SQL 표현
+update 고객
+,마일리지등급
+set 마일리지 = 마일리지 + 1000
+where 마일리지 between 하한마일리지 and 상한마일리지
+and 등급명 = 'S';
+
+-- 결과 확인을 위한 select문
+select 고객번호
+,고객회사명
+,마일리지
+from 고객
+inner join 마일리지등급
+on 마일리지 between 하한마일리지 and 상한마일리지
+where 등급명 = 'S';
+
+-- delete selest : delete문에서도 삭제할 레코드를 찾기 위해 서브쿼리를 사용한다.
+-- ex)7-15 주문 테이블에는 존재하나 주문세부 테이블에는 존재하지 않는 주문번호를 주문 테이블에서 삭제하라
+delete from 주문
+where 주문번호 not in (
+select distinct 주문번호
+from 주문세부
+);
+
+select * from 주문세부;
+
+-- ex)7-16 주문번호 'H0248'에 대한 내역을 주문 테이블과 주문세부 테이블에서 모두 삭제하라. 하나의 문장으로 작업을 수행해라
+-- 주문 테이블, 주문세부 테이블에  주문번호 'H0248'를 동시에 삭제하기
+
+-- ANSI SQL 표햔
+select *
+from 주문
+where 주문번호  = 'H0248';
+
+-- Non-ANSI SQL 표햔
+
+-- ex)7-17 한 번도 주문한 적이 없는 고객의 정보를 삭제하라
+-- 한 번도 주문한 적이 없는 고객 검색
+select 고객.*
+from 고객
+left outer join 주문
+on 고객.고객번호 = 주문.고객번호
+where 주문.고객번호 is null;
+
+-- 주문한 적이 없는 고객의 레코드를 고객 테이블에서 삭제하기
+delete 고객
+from 고객
+left join 주문
+on 고객.고객고객번호 = 주문.고객번호
+where 주문.고객번호 is null;
+
+-- 삭제된 고객 정보가 고객 테이블에 존재하는지 확인하기
+select *
+from 고객
+where 고객번호 in('BOOZA', 'RISPA', 'SSAFI','TTRAN');
+
+-- ex)8-1 한빛학사 데이터 베이스 생성
+create database 한빛학사;
+
+-- ex)8-2 다음과 같이 한빛학사 데이터베이스에 학과 테이블을 생성하고, 레코드 3건을 삽입하라
+create table 학과
+(
+학과번호 char(2)
+,학과명 varchar(20)
+,학과장명 varchar(20)
+);
+
+-- 학과 테이블에 3건 레코드를 삽입
+insert into 학과
+values('AA', '컴퓨터공학과', '배경민')
+,('BB', '소프트웨어학과', '김남준')
+,('CC', '디자인융합학과', '김남준');
+
+select * from 학과;
+
+-- ex)8-3 다음과 같이 학생 테이블을 생성하고, 레코드 3건을 삽입하라
+create table 학생
+(
+학번 char(5)
+,이름 varchar(20)
+,생일 date
+,연락처 varchar(20)
+,학과번호 char(2)
+);
+
+-- 학생 데이터 표를 참고해 3건의 레코드 삽입
+insert into 학생
+value('S0001','이윤주','2020-01-30','01033334444','AA')
+,('S0001','이승은','2021-02-23', null,'AA')
+,('S0003','백재용','2018-03-31', '0107778888','DD');
+
+select * from 학생;
+
+-- ex)8-4 학생 테이블을 사용해 휴학생 테이블을 생성하라, 이때 데이터는 복사하지 않고, 구조만 복사하라
+create table 휴학생 as
+SELECT *
+FROM 학생
+WHERE 1 = 2;
+
+select * from 휴학생;
+
+-- ex)8-5 휘트니스센터 회원을 관리하는 테이블을 만들어라. 이때 체질량 지수가 자동 계산되어 저장되도록 GENERATED 컬럼으로 설정하라
+-- 회원 테이블 생성
+create table 회원
+(
+아이디 varchar(20) primary key
+,회원명 varchar(20)
+,키 INT
+,몸무게 int
+,체질량지수 decimal(4,1) as (몸무게 / power(키 / 100, 2)) stored -- 몸무게 / power <- 제곱, stored : 실제컬럼으로 존재시켜라
+);
+
+insert into 회원(아이디, 회원명, 키, 몸무게)
+values('APPLE', '김사과', 178, 70);
+
+select * from 회원;
