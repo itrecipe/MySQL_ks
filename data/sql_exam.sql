@@ -1045,3 +1045,340 @@ insert into 회원(아이디, 회원명, 키, 몸무게)
 values('APPLE', '김사과', 178, 70);
 
 select * from 회원;
+
+-- Index
+-- ex)9-11 날씨 테이블과 인덱스를 생성
+-- 컬럼 : 년도 INT, 월 INT, 일 INT, 도시 VARCHAR(20), 기온 NUMERIC(3,1) 습도 INT
+-- 기본키 : 년도 + 월 + 일 + 도시
+-- 보조 인덱스 : 기온, 도시
+
+-- 검색능력향상에는 좋으나, 남발하는 insert, delete 성능이 떨어질수 있다.
+create table 날씨
+(
+년도 INT
+,월 INT
+,일 INT
+,도시 varchar(20)
+,기온 numeric(3,1)
+,습도 INT
+,primary key(년도, 월, 일, 도시)
+,index 기온인덱스(기온)
+,index 도시인덱스(도시)
+);
+
+select * from 날씨;
+show index from 날씨;
+
+-- 옵티마이저
+-- ex)9-12 주문건수가 많은 고객 순으로
+explain format = tree
+select 고객회사명
+,count(*) as 주문건수
+from 고객
+inner join 주문
+on 고객.고객번호 = 주문.고객번호
+group by 고객회사명
+order by count(*) desc;
+
+-- ex) 9-13 주문건수가 많은 고객 순으로 고객회사명별로 주문건수를 보이는 쿼리에 대해 실행 계획 및 실행 결과에 대한 통계를 확인해라
+explain analyze -- 이걸로 실행계획을 출력 해보는것을 더 권장하셨다.
+select 고객회사명
+,count(*) as 주문건수
+from 고객
+inner join 주문
+on 고객.고객번호 = 주문.고객번호
+group by 고객회사명
+order by count(*) desc;
+
+-- 스토어드 프로시저
+-- ex)10-1 IF문을 사용해 두 개 숫자 10과 5의 크기를 비교하는 프로시저를 작성하라
+delimiter $$
+create procedure proc_if()
+begin
+declare x int;
+declare y int default 5;
+set x = 10;
+if x > y then
+select 'x는 y보다 크다.'as 결과;
+else
+select 'x는 y보다 작거나 같다.' as 결과;
+end if;
+end $$
+delimiter ;
+
+-- 스토어드 프로시저 호출 방법
+call proc_if();
+
+-- 사용자 정의 프로시저의 생성과 삭제
+-- ex) 10-6 고객 정보와 고객 수를 보이는 프로시저를 작성하라
+delimiter $$
+create procedure proc_고객정보()
+begin
+select *
+from 고객;
+select count(*) as 고객수
+from 고객;
+end $$
+delimiter ;
+
+call proc_고객정보();
+
+-- ex)10-7 도시를 입력하면 해당 도시의 고객 정보와 고객 수를 보이는 프로시저를 작성하라
+delimiter $$
+create procedure proc_도시고객정보
+	(
+	in city varchar(50)
+	)
+begin
+	select *
+	from 고객
+    where 도시 = city;
+    
+	select count(*) as 고객수
+	from 고객;
+	end $$
+delimiter ;
+
+call proc_도시고객정보('부산광역시');
+
+-- ex)10-9 고객회사명과 추가할 마일리지를 입력하면 해동 고객에 대하여 입력한 마일리지 만큼 추가하는 프로시저를 작성하시오.
+delimiter $$
+create procedure proc_고객회사명_마일리지추가
+	(
+	in company varchar(50)
+    ,IN add_mileage INT
+	)
+begin
+	select 고객번호
+	,고객회사명
+    ,마일리지 as 변경전마일리지
+    from 고객
+    where 고객회사명 = company;
+    
+    update 고객
+    set 마일리지 = 마일리지 + add_mileage
+    where 고객회사명 = company;
+    
+	select 고객번호
+		   ,고객회사명
+           ,마일리지 as 변경후마일리지
+	from 고객
+    where 고객회사명 = company;
+	end $$
+delimiter ;
+
+call proc_고객회사명_마일리지추가('진영무역', 1000);
+
+-- ex)10-10 고객회사명을 입력하면 해당 고객의 마일리지를 변경하는 프로시저를 작성하라
+-- 이때 만일 고객의 마일리지가 전체 고객의 평균마일리지보다 크다면 100점 추가, 그렇지 않으면 전 고객의 평균마일리지만큼으로 변경하라
+delimiter $$
+create procedure proc_고객회사명_평균마일리지로변경
+	(
+	in company varchar(50)
+	)
+begin
+	declare 평균마일리지 INT;
+    declare 보유마일리지 INT;
+
+	select 고객회사명
+    ,마일리지 as 변경전마일리지
+    from 고객
+    where 고객회사명 = company;
+    
+	set 평균마일리지 = (select avg(마일리지) 
+					from 고객);
+    set 보유마일리지 = (select 마일리지 
+					from 고객 
+                    where 고객회사명 = company);
+	if(보유마일리지 > 평균마일리지) then
+		update 고객
+		set 마일리지 = 마일리지 + 100
+		where 고객회사명 = company;
+	else
+		update 고객
+        set 마일리지 = 평균마일리지
+		where 고객회사명 = company;
+	end if;
+    
+    select 고객회사명
+		   ,마일리지 as 변경후마일리지
+	from 고객
+    where 고객회사명 = company;
+end $$
+delimiter ;
+
+call proc_고객회사명_평균마일리지로변경('굿모닝서울');
+
+-- ex)10-11 고객회사명을 입력하면 고객의 보유 마일리지에 따라서 등급을 보이는 프로시저를 작성하라
+-- 이때 고객의 마일리지가 100,000점 이상이면 '최우수고객회사', 50,000점 이상이면 '우수고객회사',
+-- 그 나머지는 '관심고객회사' 라고 보여라
+
+delimiter $$
+create procedure proc_고객등급
+	(
+	in company varchar(50), -- 매개변수 역할
+    out grade varchar(20) -- 회사이름을 집어 넣으면 등급을 반환하라는 뜻
+	)
+begin
+    declare 보유마일리지 INT;
+
+	select 마일리지
+    into 보유마일리지
+    from 고객
+    where 고객회사명 = company;
+    
+	if 보유마일리지 > 1000000 then
+		set grade = '최우수고객회사';
+	elseif 보유마일리지 >= 50000 then
+		set grade = '우수고객회사';
+	else
+		set grade = '관심고객회사';
+	end if;
+end $$
+delimiter ;
+
+call proc_고객등급('그린로더스', @그린로더스등급);
+call proc_고객등급('오뚜락', @오뚜락등급);
+
+select @그린로더스등급, @오뚜락등급;
+
+-- ex)10-12 인상율과 금액을 입력하면 인상금액을 계산하고, 그 결과를 확인할 수 있는 프로시저를 작성하라
+delimiter $$
+create procedure proc_인상금액
+	(
+		in increase_rate int
+        ,inout price int
+    )
+begin
+	set price = price * (1 + increase_rate / 100);
+end $$
+delimiter ;
+
+set @금액 = 10000;
+call proc_인상금액(10, @금액);
+select @금액;
+
+call proc_인상금액(10, @금액);
+select @금액;
+
+-- ex)10-13 수량과 단가를 입력하면 두 수를 곱하여 금액을 반환하는 함수를 생성하라
+-- 아래 쿼리가 실행이 안되고 권한이 없다는 오류가 나오는데 set global을 포함한 명령어를 입력 해주면 가능하다 값을 1로 주면 사용, 0으로 주면 비사용
+set global log_bin_trust_function_creators = 1;
+
+delimiter $$
+create function func_금액(quantity INT, price INT)
+	returns int
+begin
+	declare amount int;
+    set amount = quantity * price;
+    return amount;
+end $$
+delimiter ;
+
+select func_금액(100, 4500);
+
+select *
+	,func_금액(주문수량, 단가) as 주문금액
+from 주문세부;
+
+-- 트리거 : 자동으로 실행되는 작업을 의미
+-- ex)10-14 제품로그 테이블을 생성하라 그리고 제품을 추가할 때마다 로그 테이블에 정보를 남기는 트리거를 작성하라 (트리거는 중요하다)
+create table 제품로그
+(
+로그번호 int auto_increment primary key,
+처리 varchar(10),
+내용 varchar(100),
+처리일 timestamp default current_timestamp
+);
+
+delimiter $$
+create trigger trigger_제품추가로그
+after insert on 제품
+for each row
+begin
+	insert into 제품로그(처리, 내용)
+    values('insert', concat('제품번호 : ', new.제품번호, '제품명 : ', new.제품명));
+end $$
+delimiter ;
+
+-- 트리거 동작 여부는 제품 테이블에 레코드를 추가하고 제품로그 테이블을 검색하여 확인한다.
+insert into 제품(제품번호, 제품명, 단가, 재고)
+values(99,'레몬캔디', 2000, 10);
+
+select *
+from 제품
+where 제품번호 = 99;
+
+select * from 제품로그;
+
+-- ex)10-15 제품 테이블
+delimiter $$
+create trigger trigger_제품변경로그
+after update on 제품
+for each row
+begin
+	if(new.단가 <> OLD.단가) then
+		insert into 제품로그(처리, 내용)
+        values('update', concat('제품번호 : ', OLD.제품번호, '단가 : ', OLD.단가, '->', new.단가));
+	end if;
+    
+    if(new.재고 <> old.재고) then
+		insert into 제품로그(처리, 내용)
+        values('update', concat('제품번호 : ', OLD.제품번호, ' 재고 : ', OLD.재고, '->', new.재고));
+	end if;
+end $$
+delimiter ;
+
+-- ex)10-15 제품 테이블에서 단가나 재고나 변경되면 변경된 사항을 제품 로그 테이블에 저장하는 트리거를 생성하라
+-- 트리거 동작 여부는 제품 테이블에서 단가나 재고 값을 변경한 후, 제품로그 테이블을 확인한다.
+update 제품
+set 단가 = 2500
+where 제품번호 = 99;
+select *
+from 제품로그;
+
+-- ex) 10-16 제품 테이블에서 제품 정보를 삭제하면 삭제된 레코드의 정보를 제품로그 테이블에 저장하는 트리거를 생성하라
+delimiter $$
+create trigger trigger_제품삭제로그
+after update on 제품
+for each row
+begin
+	insert into 제품로그(처리, 내용)
+    values('delete', concat('제품번호 : ', OLD.제품번호, ' 제품명 : ', OLD.제품명));
+END $$
+DELIMITER ;
+
+-- 트리거 동작 여부는 제품 테이블에서 레코드를 삭제한 후, 제품로그 테이블을 확인한다.
+delete
+from 제품
+where 제품번호 = 99;
+
+select * from 제품로그;
+
+-- 윈도우(파티션) 함수 : 윈도우 함수는 결과를 생성하기 위해 입력으로 고려해야 하는 행의 일부를 over절에서 정의한다.
+-- over절 (필요할때 쓰는것이고 함부로 남발하면 메모리 낭비를 유발함)
+-- ex) 11-1 '부산광역시' 고객에 대하여 고객번호, 고객회사명, 마일리지와 평균 마일리지를 함께 보여라
+select 고객번호
+	   ,고객회사명
+       ,마일리지
+       ,avg(마일리지) over() as 평균마일리지
+from 고객
+where 도시 = '부산광역시';
+
+-- ex)11-2 '부산광역시' 고객에 대해 고객번호, 고객회사명, 마일리지, 평균마일리지, 
+-- 그리고 각 고객의 마일리지와 평균마일리지 값의 차이를 보여라
+select 고객번호
+	   ,고객회사명
+       ,마일리지
+       ,avg(마일리지) over() as 평균마일리지
+       ,마일리지 - avg(마일리지) over() as 차이
+from 고객
+where 도시 = '부산광역시';
+
+-- partition by절
+-- 전체 집합을 특정 기준에 의해 소그룹으로 나누고자 할 떄 over절 내에서 partition by절을 사용한다.
+select 도시
+	   ,avg(마일리지) as 평균마일리지
+from 고객
+where 지역 = '경기도'
+group by 도시;
