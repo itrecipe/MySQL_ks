@@ -1548,6 +1548,4 @@ create table 학과 (
 학과명 varchar(20)
 );
 
-select * from 고객주문요약;
-
 show tables;
