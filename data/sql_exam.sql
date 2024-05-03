@@ -1382,3 +1382,172 @@ select 도시
 from 고객
 where 지역 = '경기도'
 group by 도시;
+
+-- ex)11-3 '경기도' 고객에 대해 고객번호, 도시, 마일리지, 도시의 평균마일리지,
+-- 그리고 각 고객의 마일리지와 도시의 평균마일리지 간 차이를 보여라
+select 고객번호
+	   ,도시
+       ,마일리지 as 고객마일리지
+       ,avg(마일리지) over(partition by 도시) as 도시평균마일리지
+       ,마일리지 - avg(마일리지) over(partition by 도시) as 차이
+from 고객
+where 지역 = '경기도';
+
+-- order by절
+-- over절에 order by절을 사용하면 정렬 기준을 지정할 수 있다.
+-- 특히 sum 윈도우 함수의 over절에 order by절을 넣으면 지정한 컬럼을 기준으로 누적 합을 구할 수 있다.
+-- ex) 11-4 '부산광역시'
+select 고객번호
+       ,마일리지 as 고객마일리지
+       ,sum(마일리지) over() as 마일리지합
+       ,sum(마일리지) over(order by 고객번호) as 누적마일리지
+from 고객
+where 도시 = '부산광역시';
+
+-- ex)11-6 '부산광역시' 고객에 대해 마일리지가 많은 고객부터 순위를 매겨라
+select 고객번호
+	   ,고객회사명
+       ,담당자명
+       ,마일리지
+       ,rank() over(order by 마일리지 desc) as 순위
+from 고객
+where 도시 = '부산광역시';
+
+-- ex)11-7 '시럽 제품에 대해 단가를 기준으로 백분율 순위를 보여라'
+select 제품명
+	   ,단가
+	   ,percent_rank() over(order by 단가) as 백분율순위
+from 제품
+where 제품명 like '%시럽%';
+
+-- ex)11-8 '부산광역시' 고객에 대하여 고객번호, 고객회사명, 마일리지 및 마일리지를 기준으로 한 누적 분포 값을 보여라
+select 고객번호
+	   ,고객회사명
+	   ,마일리지
+	   ,cume_dist() over(order by 마일리지) as 누적분포
+from 고객
+where 도시 = '부산광역시';
+
+-- ex) 11-9 '인천광역시' 고객에 대해 마일리지를 기준으로 하여 3개 그룹으로 나눠라
+select 고객번호
+		,도시
+        ,마일리지
+        ,ntile(3) over(order by 마일리지) as 그룹
+from 고객
+where 도시 = '인천광역시';
+
+-- ex) 11-10 각 도시별로 고객에 대해 마일리지를 기주능로 두 그룹씩 나눠라
+select 고객번호
+		,도시
+        ,마일리지
+        ,ntile(2) over(partition by 도시 order by 마일리지) as 그룹
+from 고객;
+
+-- first_value() : 정렬된 컬럼 또는 수식 값 중 첫번째 값을 반환
+-- ex) 11-11 '부산광역시' 고객에 대해 고객 회사명, 마일리지, 최소 마일리지를 가진
+-- 고객회사명, 최소 마일리지, 마일리지와 최소 마일리지와의 차이를 보여라
+select 고객회사명
+		,마일리지
+        ,first_value(고객회사명) over(order by 마일리지) as 최소마일리지보유고객
+        ,first_value(마일리지) over(order by 마일리지) as 최소마일리지
+        ,마일리지 - first_value(마일리지) over(order by 마일리지) as 차이
+from 고객
+where 도시 = '부산광역시';
+
+-- ex) 11-12 각 도시별로 고객회사명, 마일리지와 최소 마일리지를 가진 고객회사명, 도시의 최소 마일리지,
+-- 그리고 고객의 마일리지와 최소마일리지 간의 차이를 보여라
+select 도시
+	   ,고객회사명
+       ,마일리지
+       ,first_value(고객회사명) over(partition by 도시 order by 마일리지) as 최소마일리지보유고객
+       ,first_value(마일리지) over(partition by 도시 order by 마일리지) as 최소마일리지
+       ,마일리지 - first_value(마일리지) over(partition by 도시 order by 마일리지) as 차이
+from 고객;
+
+-- last_value
+-- ex) 11-13 '부산광역시' 고객에 대해 고객회사명, 마일리지와 최대 마일리지를 가진 고객회사명, 최대 마일리지를 보여라
+select 도시
+	   ,고객회사명
+       ,마일리지
+       ,last_value(고객회사명) over(partition by 도시 order by 마일리지) as 최소마일리지보유고객
+       ,last_value(마일리지) over(partition by 도시 order by 마일리지) as 최소마일리지
+       ,마일리지 - first_value(마일리지) over(partition by 도시 order by 마일리지) as 차이
+from 고객;
+
+-- 각 행마다 최대 마일리지를 보이도록 sql 문장을 수정 (unbounded preceding, unbounded following) 옵션 사용
+select 도시
+	   ,고객회사명
+       ,last_value(마일리지) over(order by 마일리지
+       rows between unbounded preceding and unbounded following) as 최대마일리지
+from 고객
+where 도시 = '부산광역시';
+
+-- LAG(), LEAD() : 윈도우에서 이전 행의 값과 다음 행에 대한 값을 알고 싶을 때 사용한다.
+-- ex) 11-14 이전 행의 고객번호, 현재 행의 고객번호, 다음 행의 고객번호를 보여라
+select lag(고객번호) over(order by 고객번호) as 이전행고객번호
+		,고객번호
+        ,lead(고객번호) over(order by 고객번호) as 다음행고객번호
+from 고객;
+
+-- nth_value()
+-- 윈도우에서 n번째 행의 값을 가져오기 위해 사용한다.
+-- ex)11-15 '부산광역시' 고객에 대하여 고객의 정보와 마일리지가 세 번째로 적은 고객의 정보를 함께 보여라
+select 고객번호
+		,고객회사명
+		,마일리지
+        ,nth_value(고객회사명, 3) over(order by 마일리지) as "3번째로 마일리지가 적은 고객"
+        ,nth_value(마일리지, 3) over(order by 마일리지) as "3번째 마일리지"
+from 고객
+where 도시 = '부산광역시';
+
+-- 데이터 모델링 : DB의 근본, 제일 중요한 파트(각종 시험에서도 제일 많이 나오고 있음)
+
+-- 개별 연습
+create table 학과1 (
+학과명 varchar(20),
+학과위치 varchar(30),
+학과전화번호 varchar(20)
+);
+
+insert into 학과1 values('컴퓨터공학', '서울시', '010');
+select * from 학과1;
+drop table 학과1;
+
+
+-- 순서 동아리 -> 학과 -> 학생 -> 동아리가입
+
+-- ex) 12-3 학생학과 테이블에 대해 제3정규형을 적용하라
+-- 학번 -> 학과번호, 학과번호 -> 학과명과 같이 속성의 종속
+
+
+-- ex) 12-1 동아리가입, 학생, 학과 테이블에 대해 제1정규형을 적용하라
+create table 동아리 (
+동아리번호 int primary key,
+동아리명 varchar(10),
+동아리가입일 date
+);
+
+create table 동아리가입 (
+동아리번호 int,
+학번 int,
+동아리가입일 date,
+foreign key (동아리번호) references 동아리(동아리번호),
+foreign key (학번) references 학생(학번)
+);
+
+drop table 동아리가입;
+
+create table 학생 (
+학번 int primary key,
+이름 varchar(10),
+학과번호 varchar(20)
+);
+
+create table 학과 (
+학과번호 int primary key,
+학과명 varchar(20)
+);
+
+select * from 고객주문요약;
+
+show tables;
