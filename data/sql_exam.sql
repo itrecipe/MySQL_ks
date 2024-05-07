@@ -1,4 +1,4 @@
-  -- 24.04.25 mySQL 수업  
+  -- 24.04.25 mySQL 학습시작
   
   -- 전체 테이블 조회
   show tables;
@@ -78,19 +78,19 @@ or 마일리지 < 1000;
 
 -- union (합집합)
 select 고객번호
-,담당자명
-,마일리지
-,도시
-from 고객
-where 도시 = '부산광역시'
-union
-select 고객번호
-,담당자명
-,마일리지
-,도시
-from 고객
-where 마일리지 < 1000
-order by 1; -- order by절은 제일 마지막에 넣는다.
+		,담당자명
+		,마일리지
+		,도시
+		from 고객
+		where 도시 = '부산광역시'
+		union
+		select 고객번호
+		,담당자명
+		,마일리지
+		,도시
+		from 고객
+		where 마일리지 < 1000
+		order by 1; -- order by절은 제일 마지막에 넣는다.
 
 -- or
 SELECT 고객번호, 담당자명, 마일리지, 도시
@@ -1549,3 +1549,322 @@ create table 학과 (
 );
 
 show tables;
+
+-- ch13 서울지하철 DB로 데이터 분석하기 - SQL 위주로 실습
+
+-- 데이터 지우고 되살리기 실습
+select * from 지하철승하차;
+delete from 지하철공기질;
+rollback;
+
+-- 오토커밋 기능 끄기 = 0, 켜기 = 1
+set autocommit = 1;
+
+-- 데이터 가져오기
+alter table 지하철공기질 modify 호선명 varchar(30);
+alter table 지하철공기질 modify 역명 varchar(30);
+alter table 지하철공기질 modify 시도명 varchar(30);
+alter table 지하철공기질 modify 시군구명 varchar(30);
+
+alter table 지하철승하차 modify 사용일자 date;
+alter table 지하철승하차 modify 호선명 varchar(30);
+alter table 지하철승하차 modify 역명 varchar(30);
+
+alter table 지하철공기질 add primary key(호선명, 역명);
+alter table 지하철승하차 add primary key(사용일자, 호선명, 역명);
+
+-- ex) 13-1 지하철공기질 테이블의 모든 정보를 보여라
+-- 작업 DB를 '서울지하철'로 지정
+use 서울지하철;
+-- 지하철 공기질 테이블 조회
+select * from 지하철공기질;
+
+-- ex) 13-2 지하철공기질 테이블에 있는 총 레코드 건수 및 각 공기질 측정 항목에 대해 평균 수치값을 보여라
+select count(*) as 총건수
+		,round(avg(미세먼지), 1) as 평균미세먼지
+        ,round(avg(초미세먼지), 1) as 평균초미세먼지
+        ,round(avg(이산화탄소), 1) as 평균이산화탄소
+        ,round(avg(폼알데하이드), 1) as 평균폼알데하이드
+        ,round(avg(일산화탄소), 1) as 평균일산화탄소
+from 지하철공기질;
+
+-- ex) 13-3 호선별로 공기질의 각 항목에 대한 평균값을 보여라
+select 호선명
+		,round(avg(미세먼지), 1) as 평균미세먼지
+        ,round(avg(초미세먼지), 1) as 평균초미세먼지
+        ,round(avg(이산화탄소), 1) as 평균이산화탄소
+        ,round(avg(폼알데하이드), 1) as 평균폼알데하이드
+        ,round(avg(일산화탄소), 1) as 평균일산화탄소
+from 지하철공기질
+group by 호선명;
+
+-- ex) 13-4 1호선 역에 대해 미세먼지 수치가 높은 역부터 10개 역의 순위를 매겨 나타내라
+select rank() over(order by 미세먼지 desc) as 순위
+		,역명
+        ,미세먼지
+from 지하철공기질
+where 호선명 = '1호선'
+limit 10;
+
+-- ex) 13-5 1호선의 평군 미세먼지 수치보다 높은 수치를 보이는 호선 및 역에 대한 정보를 보여라 (서브쿼리 사용)
+select 호선명
+		,역명
+        ,미세먼지
+from 지하철공기질
+where 미세먼지 > (
+				select avg(미세먼지)
+				from 지하철공기질
+				where 호선명 = '1호선'
+			   );
+
+-- ex) 13-6 시군구명별로 역 개수와 공기질 각 항목에 대한 평균값을 보여라
+-- 이때 역의 개수가 많은 레코드부터 순서대로 나타내라
+select 시군구명
+		,count(*) as 역개수
+		,round(avg(미세먼지), 1) as 평균미세먼지
+        ,round(avg(초미세먼지), 1) as 평균초미세먼지
+        ,round(avg(이산화탄소), 1) as 평균이산화탄소
+        ,round(avg(폼알데하이드), 1) as 평균폼알데하이드
+        ,round(avg(일산화탄소), 1) as 평균일산화탄소
+from 지하철공기질
+group by 시군구명
+order by 2 desc;
+
+-- ex) 13-7 시군구명별로 역의 개수와 역명 목록을 보여라
+-- 이때 중복된 역명은 한번씩만 보이며, 역 개수와 많은 레코드부터 순서대로 나타내라
+select 시군구명
+		,count(distinct 역명) as 역개수
+        ,group_concat(distinct 역명) as 역명
+from 지하철공기질
+group by 시군구명
+order by 역개수 desc;
+
+-- ex) 13-8 환승역과 역개수, 환승 호선명을 목록으로 함께 보여라.
+-- 이때 환승 역개수가 많은 역부터 순서대로 나타내시오.
+select 역명 as 환승역
+		,count(*) as 역개수
+        ,group_concat(호선명) as 호선명
+from 지하철공기질
+group by 역명
+having count(*) >= 2
+order by 2 desc;
+
+-- ex) 13-9 환승역과 환승역이 아닌 역을 구분해 각 공기질 항목에 대한 평균값을 보여라
+with 환승역 as
+(
+select 역명
+		,count(*) as 환승역수
+from 지하철공기질
+group by 역명
+having count(*) >= 2
+)
+
+select '환승역' as 구분
+		,round(avg(미세먼지), 1) as 평균미세먼지
+        ,round(avg(초미세먼지), 1) as 평균초미세먼지
+        ,round(avg(이산화탄소), 1) as 평균이산화탄소
+        ,round(avg(폼알데하이드), 1) as 평균폼알데하이드
+        ,round(avg(일산화탄소), 1) as 평균일산화탄소
+from 지하철공기질
+where 역명 in (
+				select 역명
+                from 환승역
+			 )
+union
+select '단일역' as 구분
+		,round(avg(미세먼지), 1) as 평균미세먼지
+        ,round(avg(초미세먼지), 1) as 평균초미세먼지
+        ,round(avg(이산화탄소), 1) as 평균이산화탄소
+        ,round(avg(폼알데하이드), 1) as 평균폼알데하이드
+        ,round(avg(일산화탄소), 1) as 평균일산화탄소
+from 지하철공기질
+where 역명 not in (
+					select 역명
+					from 환승역
+			     );
+                 
+-- ex)13-10 각 호선별로 미세먼지 수치가 가장 높은 역에 대해 역명과 미세먼지 수치를 보여라
+select 호선명
+		,역명
+        ,미세먼지
+from 지하철공기질
+where(호선명, 미세먼지) in (select 호선명, max(미세먼지)
+						 from 지하철공기질
+                         group by 호선명);
+
+-- ex)13-11 호선명별로 승차승객수합, 하차승객수합, 승하차승객수합을 보여라
+select 호선명
+		,sum(승차승객수) as 승차승객수합
+        ,sum(하차승객수) as 하차승객수합
+        ,sum(승차승객수 + 하차승객수) as 승하차승객수합
+from 지하철승하차
+group by 호선명;
+
+-- ex)13-12 호선명별로 역개수, 역명, 승하차승객수합, 역당 평균승하차승객수를 보여라
+-- 이떄 역당 평균승하자승객수가 많은 레코드부터 순서대로 나타내라
+select 호선명
+		,count(distinct 역명) as 역개수
+        ,group_concat(distinct 역명) as 역명
+        ,sum(승차승객수 + 하차승객수) as 승하차승객수합
+        ,round(sum(승차승객수 + 하차승객수) / count(distinct 역명), 0) as 역당_평균승하차승객수
+from 지하철승하차
+group by 호선명
+order by 5 desc;
+
+-- ex)13-13 월별, 호선명별로 승하차승객수합을 보여라
+select month(사용일자) as 월
+		,호선명
+        ,sum(승차승객수 + 하차승객수) as 승하차승객수합
+from 지하철승하차
+group by month(사용일자)
+		,호선명
+        order by 1, 2;
+
+-- ex)13-14 어느 역, 어느 호선의 승하차승객수합이 많은지 상위 10개의 정보를 보여라
+select 역명
+		,호선명
+        ,sum(승차승객수 + 하차승객수) as 승하차승객수합
+from 지하철승하차
+group by 역명
+		,호선명
+order by 3 desc
+limit 10;
+
+-- ex)13-15 2호선에 대해 요일별로 승하차승객수합을 보이되 월요일부터 순서대로 보여라
+select month(사용일자) as 월
+		,weekday(사용일자) as 징수요일
+        ,case weekday(사용일자)
+			when 0 then '월요일'
+            when 1 then '화요일'
+            when 2 then '수요일'
+            when 3 then '목요일'
+            when 4 then '금요일'
+            when 5 then '토요일'
+            else '일요일'
+		end as 요일
+        ,sum(승차승객수 + 하차승객수) as 승하차승객수합
+from 지하철승하차
+where 호선명 = '2호선'
+group by month(사용일자)
+		,weekday(사용일자)
+        ,case weekday(사용일자)
+			when 0 then '월요일'
+            when 1 then '화요일'
+            when 2 then '수요일'
+            when 3 then '목요일'
+            when 4 then '금요일'
+            when 5 then '토요일'
+            else '일요일'
+		end
+order by 1, 2;
+            
+-- ex)13-16 강닙입구 홍대입구역, 짐실역, 명동역의 12월 데이터에 대해
+-- 역명, 사용일자, 승하차승객수 및 승하자승객수누적합을 보여라
+-- error code 1055가 날 수 있는 문제
+select 역명
+		,사용일자
+        ,sum(승차승객수 + 하차승객수) as 승하차승객수합
+        ,sum(승차승객수 + 하차승객수)
+			over(partition by 역명 order by 사용일자) 승하차승객수누적합
+from 지하철승하차
+where 역명 in ('강남','홍대입구','잠실','명동')
+and month(사용일자) = 12
+group by 역명, 사용일자, 승차승객수, 하차승객수 -- 승차승객수, 하차승객수 해당 절에 추가하여 1055오류 해결
+order by 1, 2;
+
+-- ex) 13-17 환승역에 대해 승하차승객수합을 보여라
+-- 이때 승하차승객수합이 많은 역부터 나타내라
+with 환승역 as
+(
+select 역명
+	   ,count(*) as 역개수
+from (
+		select distinct 호선명
+						,역명
+		from 지하철승하차
+        ) as t
+group by 역명
+having count(*) >= 2
+)
+
+select 역명
+        ,sum(승차승객수 + 하차승객수) as 승하차승객수합
+		,group_concat(distinct 호선명) as 호선명
+from 지하철승하차
+where 역명 in (
+				select 역명
+				from 환승역
+			 )
+group by 역명
+order by 2 desc;
+
+-- ex)13-18 호선명, 역명, 승차승객수합, 하차승객수합, 승하차승객수합을 보이는 뷰를 지하철승하차뷰라는 이름으로 생성하라
+create view 지하철승하차뷰
+as
+select 호선명
+		,역명
+		,sum(승차승객수) as 승차승객수합
+        ,sum(하차승객수) as 하차승객수합
+        ,sum(승차승객수 + 하차승객수) as 승하차승객수합
+from 지하철승하차
+group by 호선명
+		,역명;
+        
+select * from 지하철승하차뷰;
+
+-- ex)13-19 호선명, 역명, 승차승객수합, 하차승객수합, 승하차승객수합 및 공기질 항목의 수치를 보여라
+-- 이때 13-18 예제에서 생성한 뷰를 사용하라
+-- ansi sql join
+select 승하차.*
+		,공기질.미세먼지
+        ,공기질.초미세먼지
+        ,공기질.이산화탄소
+        ,공기질.폼알데하이드
+        ,공기질.일산화탄소
+from 지하철승하차뷰 as 승하차
+join 지하철공기질 as 공기질
+on 승하차.호선명 = 공기질.호선명
+and 승하차.역명 = 공기질.역명
+order by 호선명
+		 ,역명;
+
+-- ex)13-20 공기질을 측정하지 않은 역에 대해 호선명, 역명을 보여라
+-- 먼저 몇 개의 역이 공기질 측정을 하지 않았는지 확인
+select count(*) as 공기질미측정역개수
+from 지하철승하차뷰 as 승하차
+where not exists (
+					select *
+                    from 지하철공기질 as 공기질
+                    where 공기질.호선명 = 승하차.호선명
+                    and 공기질.역명 = 승하차.역명
+				 );
+                 
+-- 공기질 측정을 하지 않은 호선명과 역명 확인
+select 호선명
+		,역명
+from 지하철승하차뷰 as 승하차
+where not exists (
+					select *
+                    from 지하철공기질 as 공기질
+                    where 공기질.호선명 = 승하차.호선명
+                    and 공기질.역명 = 승하차.역명
+				 );
+                 
+-- ex) 13-21 공기질 측정을 한 역을 대상으로 호선명별로 역개수, 승하차승객수합, 각 호선의 역당 평균승하차승객수 및 공기질 각 항목에 대한 평균 수치를 보여라
+-- 이때 역당 평균승하차승객수가 많은 레코드부터 순서대로 나타내라
+-- ansi sql join
+select 승하차.호선명
+		,count(승하차.역명) as 역개수
+        ,sum(승하차승객수합) as 승하차승객수합
+        ,round(sum(승하차승객수합) / count(승하차.역명), 0) as 역당_평균_승하차인원수
+		,round(avg(미세먼지), 1) as 평균미세먼지
+        ,round(avg(초미세먼지), 1) as 평균초미세먼지
+        ,round(avg(이산화탄소), 1) as 평균이산화탄소
+        ,round(avg(폼알데하이드), 1) as 평균폼알데하이드
+        ,round(avg(일산화탄소), 1) as 평균일산화탄소
+from 지하철승하차뷰 as 승하차
+join 지하철공기질 as 공기질
+on 승하차.호선명 = 공기질.호선명
+and 승하차.역명 = 공기질.역명
+group by 승하차.호선명
+order by 4 desc;
