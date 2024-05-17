@@ -21,3 +21,5 @@ CREATE TABLE tbl_admin_member(
 	);
     
 select * from tbl_admin_member;
+
+delete from tbl_admin_member where a_m_no = 1;
