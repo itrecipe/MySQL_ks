@@ -120,6 +120,8 @@ CREATE TABLE StoreInformation (
 ---------------------------------------------------------------------
 -- 주문정보 테이블
 
+drop table orderinformation;
+
 CREATE TABLE OrderInformation (
     order_id INT AUTO_INCREMENT PRIMARY KEY,
     customer_id INT NOT NULL,
@@ -127,7 +129,9 @@ CREATE TABLE OrderInformation (
     order_details VARCHAR(255) NOT NULL,
     total_price INT NOT NULL,
     order_approval_status TINYINT(1) NOT NULL DEFAULT 0,
-    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,    
+    user_x DECIMAL(15, 12) NOT NULL,
+    user_y DECIMAL(15, 12) NOT NULL,
     FOREIGN KEY (customer_id) REFERENCES UserInformation(user_id),
     FOREIGN KEY (store_id) REFERENCES StoreRegistration(store_id)
 );
@@ -135,3 +139,21 @@ CREATE TABLE OrderInformation (
 select * from orderinformation;
 select * from storeregistration;
 select * from storeinformation;
+
+SELECT oi.*, ui.*
+FROM OrderInformation oi
+JOIN UserInformation ui ON oi.customer_id = ui.user_id
+WHERE oi.store_id = 5 AND oi.order_approval_status = 1;
+
+SELECT *
+FROM OrderInformation
+WHERE store_id = 5
+  AND DATE(order_date) = CURRENT_DATE();
+  
+
+SELECT o.order_id, o.customer_id, o.store_id, o.order_details, o.total_price, o.user_x, o.user_y,
+       u.Email AS email, u.Name AS name
+FROM OrderInformation o
+JOIN UserInformation u ON o.customer_id = u.user_id
+WHERE o.store_id = 5;
+
