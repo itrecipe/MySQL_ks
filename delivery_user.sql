@@ -165,14 +165,25 @@ CREATE TABLE RiderDelivery (
     distance_to_user DECIMAL(15, 12) NOT NULL,
     delivery_price INT NOT NULL, 
     delivery_status TINYINT(1) NOT NULL DEFAULT 0,
-     order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (order_id) REFERENCES OrderInformation(order_id),
     FOREIGN KEY (store_id) REFERENCES StoreRegistration(store_id),
     FOREIGN KEY (rider_id) REFERENCES UserInformation(user_id)
 );
 
-select * from RiderDelivery;
-select * from userinformation;
-select * from userinfo_auth;
-select * from orderinformation;
-select * from storeinformation;
+-- 댓글 테이블
+CREATE TABLE Comments (
+    comment_id INT PRIMARY KEY AUTO_INCREMENT,
+    store_id INT NOT NULL,
+    author_id INT NOT NULL,
+    author_name VARCHAR(20) NOT NULL,
+    content TEXT NOT NULL,
+    rating TINYINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    visibility_status TINYINT(1) NOT NULL DEFAULT 1,
+    creation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modification_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (store_id) REFERENCES StoreRegistration(store_id),
+    FOREIGN KEY (author_id) REFERENCES UserInformation(user_id)
+);
+
+select * from comments;
