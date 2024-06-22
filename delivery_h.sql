@@ -171,19 +171,26 @@ CREATE TABLE RiderDelivery (
     FOREIGN KEY (rider_id) REFERENCES UserInformation(user_id)
 );
 
+drop table comments;
+
 -- 댓글 테이블
 CREATE TABLE Comments (
-    comment_id INT PRIMARY KEY AUTO_INCREMENT,
+    comment_id INT AUTO_INCREMENT PRIMARY KEY,
     store_id INT NOT NULL,
     author_id INT NOT NULL,
     author_name VARCHAR(20) NOT NULL,
     content TEXT NOT NULL,
-    rating TINYINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    rating TINYINT CHECK (rating BETWEEN 0 AND 5),
     visibility_status TINYINT(1) NOT NULL DEFAULT 1,
     creation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modification_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    reply_id INT,
+    depth TINYINT CHECK (depth IN (1, 2)),
     FOREIGN KEY (store_id) REFERENCES StoreRegistration(store_id),
     FOREIGN KEY (author_id) REFERENCES UserInformation(user_id)
 );
 
 select * from comments;
+select * from userinformation;
+select * from userinfo_auth;
+select * from storeregistration;
