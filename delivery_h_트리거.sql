@@ -1,3 +1,5 @@
+-- 트리거 부분만 따로 뗴어냄
+
 -- 새로운 테이블과 트리거 생성
 CREATE TABLE StoreRegistrationAudit (
     audit_id INT AUTO_INCREMENT PRIMARY KEY,
