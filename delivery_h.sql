@@ -13,9 +13,6 @@ CREATE TABLE UserInformation (
     modification_date DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- UserInformation 테이블 전체 조회
-select * from UserInformation;
-
 -- 기본 데이터
 -- NoOpPasswordEncoder - 암호화 없이 로그인 테스트 하기
 
@@ -62,8 +59,6 @@ CREATE TABLE `userinfo_auth` (
     , PRIMARY KEY(auth_no)
 );
 
-SELECT * FROM userinfo_auth;
-
 -- 기본 데이터
 -- 사용자
 -- * 권한 : USER
@@ -84,7 +79,7 @@ SET auth = CONCAT('ROLE_', auth)
 WHERE auth NOT LIKE 'ROLE_%';
 
 --------------------------------------------------------------------
--- 업체 & 관리자 (store & admin)
+-- 업체 및 관리자 파트 (store & admin)
 
 -- 업체 & 관리자 등록
 CREATE TABLE StoreRegistration (
@@ -162,7 +157,7 @@ CREATE TABLE RiderDelivery (
     FOREIGN KEY (rider_id) REFERENCES UserInformation(user_id)
 );
 
--- 댓글 테이블
+-- 댓글, 대댓글 테이블
 CREATE TABLE Comments (
     comment_id INT AUTO_INCREMENT PRIMARY KEY,
     store_id INT NOT NULL,
@@ -189,7 +184,7 @@ CREATE TABLE Reports (
     report_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
---
+-- 업체 등록 정보에 대한 변경 이력을 관리해줄 테이블
 CREATE TABLE StoreRegistrationAudit (
     audit_id INT AUTO_INCREMENT PRIMARY KEY,
     store_id INT,
@@ -232,3 +227,4 @@ DROP TABLE IF EXISTS StoreRegistrationAudit;
 select * from comments;
 select * from userinformation;
 select * from orderinformation;
+select * from storeregistration;

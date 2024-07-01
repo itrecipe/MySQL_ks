@@ -1,23 +1,4 @@
--- 트리거 부분만 따로 뗴어냄
-
--- 새로운 테이블과 트리거 생성
-CREATE TABLE StoreRegistrationAudit (
-    audit_id INT AUTO_INCREMENT PRIMARY KEY,
-    store_id INT,
-    owner_id INT,
-    store_name VARCHAR(30),
-    store_address VARCHAR(50),
-    store_description TEXT,
-    store_image VARCHAR(100),
-    approval_status TINYINT(1),
-    approval_date DATETIME,
-    modification_date TIMESTAMP,
-    store_x DECIMAL(15, 12),
-    store_y DECIMAL(15, 12),
-    store_ca VARCHAR(20),
-    change_type ENUM('UPDATE', 'DELETE'),
-    change_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+-- DeliveryOracle 프로젝트에서 트리거 부분만 따로 뗴어낸 sql 파일
 
 DELIMITER //
 
