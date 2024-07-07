@@ -123,6 +123,7 @@ CREATE TABLE OrderInformation (
     user_y DECIMAL(15, 12) NOT NULL,
     FOREIGN KEY (customer_id) REFERENCES UserInformation(user_id)
 );
+select * from orderinformation;
 
 -- < Store & Admin 파트 : 결제 내역 조회 기능 > => orderinformation 테이블의 담긴 store_id가 5인 결제 내역과 각종 세부 정보들을 추출하기 위한 쿼리 작성
 SELECT o.order_id, o.customer_id, o.store_id, o.order_details, o.total_price, o.user_x, o.user_y,
@@ -210,9 +211,51 @@ CREATE TABLE StoreRegistrationAudit (
 -- 테이블 존재 여부 확인
 SHOW TABLES;
 
--- 트리거 삭제
-DROP TRIGGER IF EXISTS before_store_update;
-DROP TRIGGER IF EXISTS before_store_delete;
+-- 업체(가게) 신고기능
+CREATE TABLE StoreReports (
+    report_id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    store_id INT NOT NULL,
+    report_status TINYINT(1) NOT NULL DEFAULT 0,
+    report_text VARCHAR(100) NOT NULL,
+    reporter_id INT NOT NULL,
+    report_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 계좌 정보를 담고 있는 테이블
+CREATE TABLE account (
+    account_id INT AUTO_INCREMENT PRIMARY KEY,
+    owner_id INT,
+    owner_name VARCHAR(10),
+    owner_email VARCHAR(30),
+    account_status TINYINT(1),
+    account_amount INT,
+    approval_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    change_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (owner_id) REFERENCES UserInformation(user_id)
+);
+
+-- 계좌 입출금 상태
+CREATE TABLE accountstatus (
+    num INT AUTO_INCREMENT PRIMARY KEY,
+    account_id INT,
+    amount INT,
+    type VARCHAR(10),
+    date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (account_id) REFERENCES account(account_id)
+);
+
+-- 순위 및 포인트
+CREATE TABLE rankpoint (
+	Rating VARCHAR(20) primary key,
+	score int
+);
+
+-- rankpoint에 집어 넣을 값
+insert into rankpoint (Rating,score) value("Bronze",5000);
+insert into rankpoint (Rating,score) value("Silver",10000);
+insert into rankpoint (Rating,score) value("Gold",50000);
+insert into rankpoint (Rating,score) value("Platinum",100000);
 
 -- 테이블 삭제 (존재할 경우에만)
 DROP TABLE IF EXISTS comments;
@@ -228,3 +271,8 @@ select * from comments;
 select * from userinformation;
 select * from orderinformation;
 select * from storeregistration;
+select * from rankpoint;
+select * from userinfo_auth;
+select * from account;
+select * from accountstatus;
+select * from storereports;
