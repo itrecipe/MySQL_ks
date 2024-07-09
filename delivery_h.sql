@@ -51,7 +51,6 @@ VALUES ( 'admin', '$2a$12$TrN..KcVjciCiz.5Vj96YOBljeVTTGJ9AUKmtfbGpgc9hmC7BxQ92'
 ------------------------------------------------------------------------------------------------------------------
 
 -- userinfo_auth : UserInfomation의 권한을 관리하는 테이블
-
 CREATE TABLE `userinfo_auth` (
       auth_no int NOT NULL AUTO_INCREMENT       -- 권한번호
     , user_id varchar(100) NOT NULL             -- 아이디
@@ -123,7 +122,6 @@ CREATE TABLE OrderInformation (
     user_y DECIMAL(15, 12) NOT NULL,
     FOREIGN KEY (customer_id) REFERENCES UserInformation(user_id)
 );
-select * from orderinformation;
 
 -- < Store & Admin 파트 : 결제 내역 조회 기능 > => orderinformation 테이블의 담긴 store_id가 5인 결제 내역과 각종 세부 정보들을 추출하기 위한 쿼리 작성
 SELECT o.order_id, o.customer_id, o.store_id, o.order_details, o.total_price, o.user_x, o.user_y,
@@ -154,6 +152,7 @@ CREATE TABLE RiderDelivery (
     store_y DECIMAL(15, 12) NOT NULL,
         user_x DECIMAL(15, 12) NOT NULL,
     user_y DECIMAL(15, 12) NOT NULL,
+    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,    
     FOREIGN KEY (order_id) REFERENCES OrderInformation(order_id),
     FOREIGN KEY (rider_id) REFERENCES UserInformation(user_id)
 );
@@ -256,6 +255,13 @@ insert into rankpoint (Rating,score) value("Bronze",5000);
 insert into rankpoint (Rating,score) value("Silver",10000);
 insert into rankpoint (Rating,score) value("Gold",50000);
 insert into rankpoint (Rating,score) value("Platinum",100000);
+
+-- 방문자 테이블
+  CREATE TABLE visitors (
+    email VARCHAR(255) NOT NULL,
+    visit_date DATE NOT NULL,
+    PRIMARY KEY (email, visit_date)
+);
 
 -- 테이블 삭제 (존재할 경우에만)
 DROP TABLE IF EXISTS comments;
