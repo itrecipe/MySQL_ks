@@ -282,3 +282,4 @@ select * from userinfo_auth;
 select * from account;
 select * from accountstatus;
 select * from storereports;
+select * from riderdelivery;
