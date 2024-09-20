@@ -283,3 +283,5 @@ select * from account;
 select * from accountstatus;
 select * from storereports;
 select * from riderdelivery;
+select * from reports;
+select * from storeregistrationaudit;
